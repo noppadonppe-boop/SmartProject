@@ -1,0 +1,82 @@
+rules_version = '2';
+
+// Security rules for the SmartProject auth + data model.
+// Data model: SmartProject/root/{users,appMeta,companies,activityLogs}
+//             companies/{companyId}/projects/{projectId}, Tasks/{id}
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() { return request.auth != null; }
+
+    // A user's own profile doc id is their (lowercased) email.
+    function myEmail() { return request.auth.token.email.lower(); }
+
+    function profile() {
+      return get(/databases/$(database)/documents/SmartProject/root/users/$(myEmail())).data;
+    }
+    function isApproved() {
+      return signedIn() && profile().status == 'approved';
+    }
+    function hasRole(r) {
+      return signedIn() && (r in profile().role);
+    }
+    function isMaster() { return hasRole('MasterAdmin'); }
+    function isCompanyManagement() { return hasRole('CompanyManagement'); }
+    function myCompanyId() { return profile().companyId; }
+
+    match /SmartProject/root/users/{email} {
+      // Read your own profile; admins read all.
+      allow read: if signedIn() && (
+        email == myEmail() ||
+        isMaster() ||
+        (isCompanyManagement() && resource.data.companyId == myCompanyId())
+      );
+      // Create only your own profile (registration / first google login).
+      allow create: if signedIn() && email == myEmail();
+      // Update your own non-privileged fields, OR a MasterAdmin updates anyone.
+      allow update: if signedIn() && (
+        isMaster() ||
+        (isCompanyManagement() &&
+          resource.data.companyId == myCompanyId() &&
+          request.resource.data.companyId == resource.data.companyId &&
+          request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['assignedProjects', 'updatedAt'])) ||
+        (email == myEmail() &&
+          !request.resource.data.diff(resource.data).affectedKeys()
+            .hasAny(['role', 'status', 'assignedProjects', 'companyId', 'isFirstUser', 'uid', 'email']))
+      );
+      allow delete: if isMaster();
+    }
+
+    match /SmartProject/root/appMeta/{doc} {
+      allow read: if signedIn();
+      // First-user transaction needs create; subsequent merges allowed for signed-in.
+      allow write: if signedIn();
+    }
+
+    match /SmartProject/root/companies/{id} {
+      allow read: if isApproved();
+      allow write: if isMaster();
+    }
+
+    match /SmartProject/root/companies/{companyId}/projects/{projectId} {
+      allow read: if isApproved();
+      allow create, update: if isApproved() && request.resource.data.companyId == companyId;
+      allow delete: if isApproved();
+    }
+
+    match /SmartProject/root/activityLogs/{id} {
+      allow create: if signedIn();
+      allow read: if isMaster();
+    }
+
+    // Projects & Tasks: any approved user may read; writes by approved users.
+    // (Tighten with assignedProjects checks if you need stricter control.)
+    match /Projects/{id} {
+      allow read, write: if isApproved();
+    }
+    match /Tasks/{id} {
+      allow read, write: if isApproved();
+    }
+  }
+}

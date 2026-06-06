@@ -1,0 +1,59 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  font-family: Inter, system-ui, -apple-system, sans-serif;
+}
+
+body {
+  margin: 0;
+  background-color: #f1f5f9;
+  color: #0f172a;
+}
+
+/* Diagonal stripe pattern used for "Actual" gantt bars */
+.bar-striped {
+  background-image: repeating-linear-gradient(
+    45deg,
+    rgba(255, 255, 255, 0.45),
+    rgba(255, 255, 255, 0.45) 4px,
+    transparent 4px,
+    transparent 8px
+  );
+}
+
+/* Thin custom scrollbars */
+.scroll-thin::-webkit-scrollbar {
+  height: 10px;
+  width: 10px;
+}
+.scroll-thin::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 6px;
+}
+.scroll-thin::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+
+/* Print: show only the schedule, expanded to full width. */
+@media print {
+  @page {
+    size: landscape;
+    margin: 8mm;
+  }
+  body {
+    background: #fff;
+  }
+  .no-print {
+    display: none !important;
+  }
+  .schedule-scroll {
+    max-height: none !important;
+    overflow: visible !important;
+  }
+  .schedule-card {
+    border: none !important;
+    box-shadow: none !important;
+  }
+}
