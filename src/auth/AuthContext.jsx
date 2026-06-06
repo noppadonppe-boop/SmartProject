@@ -16,6 +16,17 @@ import {
   logActivity,
 } from '../services/userService'
 
+const deepEqual = (obj1, obj2) => {
+  if (obj1 === obj2) return true;
+  if (!obj1 || !obj2 || typeof obj1 !== 'object' || typeof obj2 !== 'object') return false;
+  const keys1 = Object.keys(obj1), keys2 = Object.keys(obj2);
+  if (keys1.length !== keys2.length) return false;
+  for (let key of keys1) {
+    if (!keys2.includes(key) || !deepEqual(obj1[key], obj2[key])) return false;
+  }
+  return true;
+}
+
 const AuthContext = createContext(null)
 export const useAuth = () => useContext(AuthContext)
 
@@ -74,7 +85,7 @@ export function AuthProvider({ children }) {
       setFirebaseUser(u)
       // Realtime profile subscription. fetchProfile failures stay silent.
       profileUnsubRef.current = subscribeProfile(u.email, (p) => {
-        setUserProfile(p)
+        setUserProfile((prev) => deepEqual(prev, p) ? prev : p)
         setLoading(false)
       })
     })
@@ -82,6 +93,23 @@ export function AuthProvider({ children }) {
       unsub()
       profileUnsubRef.current?.()
     }
+  }, [])
+
+  // Listen for mock updates so the app is Realtime even without Firebase
+  useEffect(() => {
+    if (USE_FIREBASE) return
+    const handleMock = (e) => {
+      const { email, patch } = e.detail
+      setUserProfile((prev) => {
+        if (prev && prev.email === email) {
+          const next = { ...prev, ...patch }
+          return deepEqual(prev, next) ? prev : next
+        }
+        return prev
+      })
+    }
+    window.addEventListener('mock-profile-update', handleMock)
+    return () => window.removeEventListener('mock-profile-update', handleMock)
   }, [])
 
   const refreshProfile = useCallback(async () => {

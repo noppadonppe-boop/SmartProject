@@ -18,6 +18,7 @@ import {
   Users,
   ZoomIn,
   ZoomOut,
+  ChevronDown,
 } from 'lucide-react'
 import { useState } from 'react'
 import { asRoleArray, roleLabel } from '../auth/roles'
@@ -453,10 +454,21 @@ const CONTENT = {
   },
 }
 
-function SummaryCard({ icon: Icon, title, description }) {
+const SECTION_COLORS = [
+  { text: 'text-sky-600', bg: 'bg-sky-100', activeBg: 'bg-sky-600', borderActive: 'border-sky-400', ring: 'ring-sky-50' },
+  { text: 'text-emerald-600', bg: 'bg-emerald-100', activeBg: 'bg-emerald-600', borderActive: 'border-emerald-400', ring: 'ring-emerald-50' },
+  { text: 'text-rose-600', bg: 'bg-rose-100', activeBg: 'bg-rose-600', borderActive: 'border-rose-400', ring: 'ring-rose-50' },
+  { text: 'text-amber-500', bg: 'bg-amber-100', activeBg: 'bg-amber-500', borderActive: 'border-amber-400', ring: 'ring-amber-50' },
+  { text: 'text-indigo-600', bg: 'bg-indigo-100', activeBg: 'bg-indigo-600', borderActive: 'border-indigo-400', ring: 'ring-indigo-50' },
+  { text: 'text-teal-600', bg: 'bg-teal-100', activeBg: 'bg-teal-600', borderActive: 'border-teal-400', ring: 'ring-teal-50' },
+  { text: 'text-purple-600', bg: 'bg-purple-100', activeBg: 'bg-purple-600', borderActive: 'border-purple-400', ring: 'ring-purple-50' },
+]
+
+function SummaryCard({ icon: Icon, title, description, colorIdx = 0 }) {
+  const theme = SECTION_COLORS[colorIdx % SECTION_COLORS.length]
   return (
     <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 flex gap-3 items-start">
-      <div className="shrink-0 w-10 h-10 rounded-xl bg-slate-900 text-white flex items-center justify-center">
+      <div className={`shrink-0 w-10 h-10 rounded-xl ${theme.bg} ${theme.text} flex items-center justify-center`}>
         <Icon size={18} />
       </div>
       <div className="min-w-0">
@@ -467,24 +479,32 @@ function SummaryCard({ icon: Icon, title, description }) {
   )
 }
 
-function SectionCard({ section, lang }) {
+function SectionCard({ section, lang, isActive, onClick, index }) {
   const Icon = section.icon
+  const theme = SECTION_COLORS[index % SECTION_COLORS.length]
   return (
-    <section className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
-      <div className="px-5 py-5 border-b border-slate-100 bg-slate-50">
-        <div className="flex items-start gap-3">
-          <div className="w-11 h-11 rounded-2xl bg-slate-900 text-white flex items-center justify-center shrink-0">
+    <section className={`bg-white rounded-2xl border transition-all duration-300 shadow-sm overflow-hidden ${isActive ? `${theme.borderActive} ring-2 ${theme.ring}` : 'border-slate-200 hover:border-slate-300 hover:shadow-md'}`}>
+      <button 
+        onClick={onClick}
+        className="w-full text-left px-5 py-4 bg-white hover:bg-slate-50 transition-colors flex items-center justify-between gap-4"
+      >
+        <div className="flex items-center gap-4 min-w-0">
+          <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 transition-colors duration-300 ${isActive ? `${theme.activeBg} text-white shadow-md shadow-slate-200/50` : `${theme.bg} ${theme.text}`}`}>
             <Icon size={22} />
           </div>
           <div className="min-w-0">
-            <h2 className="text-xl font-bold text-slate-900">{section.title}</h2>
-            <p className="text-sm text-slate-500 leading-relaxed mt-1">{section.intro}</p>
+            <h2 className={`text-lg font-bold transition-colors ${isActive ? theme.text : 'text-slate-800'}`}>{section.title}</h2>
+            {!isActive && <p className="text-sm text-slate-500 truncate mt-0.5">{section.intro}</p>}
           </div>
         </div>
-      </div>
+        <div className={`shrink-0 text-slate-400 transition-transform duration-300 ${isActive ? `rotate-180 ${theme.text}` : ''}`}>
+          <ChevronDown size={20} />
+        </div>
+      </button>
 
-      <div className="grid lg:grid-cols-2 gap-4 p-5">
-        <div className="rounded-2xl border border-slate-200 bg-white p-4">
+      <div className={`grid lg:grid-cols-2 gap-4 px-5 transition-all duration-500 ease-in-out ${isActive ? 'pb-5 opacity-100 max-h-[2000px]' : 'max-h-0 opacity-0 overflow-hidden'}`}>
+        <div className="rounded-2xl border border-slate-200 bg-white p-4 mt-2 shadow-sm">
+          <p className="text-sm text-slate-600 leading-relaxed mb-4 pb-4 border-b border-slate-100">{section.intro}</p>
           <div className="flex items-center gap-2 mb-3 text-slate-800 font-semibold">
             <ArrowRight size={18} className="text-slate-600" />
             {lang === 'th' ? 'ขั้นตอนการใช้งาน' : 'Steps'}
@@ -492,7 +512,7 @@ function SectionCard({ section, lang }) {
           <ol className="space-y-3">
             {section.bullets.map((item, index) => (
               <li key={item} className="flex gap-3 text-sm text-slate-600 leading-relaxed">
-                <span className="w-7 h-7 rounded-full bg-slate-100 border border-slate-200 text-slate-700 flex items-center justify-center text-xs font-bold shrink-0">
+                <span className="w-6 h-6 rounded-full bg-blue-50 border border-blue-100 text-blue-700 flex items-center justify-center text-[11px] font-bold shrink-0">
                   {index + 1}
                 </span>
                 <span className="pt-0.5">{item}</span>
@@ -501,7 +521,7 @@ function SectionCard({ section, lang }) {
           </ol>
         </div>
 
-        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 space-y-4">
+        <div className="rounded-2xl border border-slate-200 bg-slate-50/80 p-4 mt-2 space-y-4 shadow-sm">
           <div>
             <div className="flex items-center gap-2 mb-2 text-slate-800 font-semibold">
               <CheckCircle2 size={18} className="text-emerald-500" />
@@ -518,7 +538,7 @@ function SectionCard({ section, lang }) {
             <ul className="space-y-2 text-sm text-slate-600">
               {section.examples.map((item) => (
                 <li key={item} className="flex gap-2 leading-relaxed">
-                  <span className="mt-0.5 text-blue-600"><ArrowRight size={15} /></span>
+                  <span className="mt-0.5 text-blue-500"><ArrowRight size={15} /></span>
                   <span>{item}</span>
                 </li>
               ))}
@@ -601,6 +621,8 @@ function RoleCard({ guide }) {
 
 export default function UserManual({ userProfile }) {
   const [lang, setLang] = useState('th')
+  const [activeTab, setActiveTab] = useState('workflow')
+  const [activeSection, setActiveSection] = useState(0)
   const copy = CONTENT[lang]
   const roles = asRoleArray(userProfile?.role)
   const roleBadges = roles.length > 0 ? roles : ['CompanyManagement', 'User']
@@ -657,42 +679,68 @@ export default function UserManual({ userProfile }) {
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
-              {copy.summaryCards.map((card) => (
-                <SummaryCard key={card.title} icon={card.icon} title={card.title} description={card.description} />
+              {copy.summaryCards.map((card, idx) => (
+                <SummaryCard key={card.title} icon={card.icon} title={card.title} description={card.description} colorIdx={idx} />
               ))}
             </div>
           </div>
         </header>
 
-        <section className="bg-white rounded-3xl border border-slate-200 shadow-sm p-5 lg:p-6">
-          <div className="flex items-center gap-3">
-            <div className="w-11 h-11 rounded-2xl bg-slate-900 text-white flex items-center justify-center">
-              <Printer size={20} />
-            </div>
-            <div>
-              <h2 className="text-xl font-bold text-slate-900">{copy.workflowTitle}</h2>
-              <p className="text-sm text-slate-500">{copy.workflowSubtitle}</p>
-            </div>
-          </div>
+        <div className="flex items-center gap-2 p-1.5 bg-slate-200/50 rounded-2xl w-full md:w-fit overflow-x-auto scroll-thin">
+          <button 
+            onClick={() => setActiveTab('workflow')}
+            className={`flex-1 md:flex-none px-6 py-2.5 rounded-xl text-sm font-bold transition-all whitespace-nowrap ${activeTab === 'workflow' ? 'bg-white text-blue-700 shadow-sm' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/50'}`}
+          >
+            {lang === 'th' ? '1. ขั้นตอนการใช้งาน' : '1. Workflow Guide'}
+          </button>
+          <button 
+            onClick={() => setActiveTab('roles')}
+            className={`flex-1 md:flex-none px-6 py-2.5 rounded-xl text-sm font-bold transition-all whitespace-nowrap ${activeTab === 'roles' ? 'bg-white text-blue-700 shadow-sm' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/50'}`}
+          >
+            {lang === 'th' ? '2. คู่มือแยกตามสิทธิ์' : '2. Role Guide'}
+          </button>
+        </div>
 
-          <div className="mt-5 grid gap-4">
-            {copy.sections.map((section) => (
-              <SectionCard key={section.title} section={section} lang={lang} />
+        {activeTab === 'workflow' && (
+          <section className="bg-white rounded-3xl border border-slate-200 shadow-sm p-5 lg:p-6 transition-all duration-500">
+            <div className="flex items-center gap-3">
+              <div className="w-11 h-11 rounded-2xl bg-blue-600 text-white flex items-center justify-center shadow-lg shadow-blue-600/30">
+                <Printer size={20} />
+              </div>
+              <div>
+                <h2 className="text-xl font-bold text-slate-900">{copy.workflowTitle}</h2>
+                <p className="text-sm text-slate-500">{copy.workflowSubtitle}</p>
+              </div>
+            </div>
+
+            <div className="mt-6 grid gap-3">
+              {copy.sections.map((section, idx) => (
+                <SectionCard 
+                  key={section.title} 
+                  section={section} 
+                  lang={lang} 
+                  isActive={activeSection === idx}
+                  onClick={() => setActiveSection(activeSection === idx ? -1 : idx)}
+                  index={idx}
+                />
+              ))}
+            </div>
+          </section>
+        )}
+
+        {activeTab === 'roles' && (
+          <section className="space-y-4 transition-all duration-500 animate-in fade-in slide-in-from-bottom-4">
+            <div className="flex items-center gap-2 px-1">
+              <Building2 size={18} className="text-blue-600" />
+              <h2 className="text-xl font-bold text-slate-900">{copy.roleIntroTitle}</h2>
+            </div>
+            <p className="text-sm text-slate-500 px-1 leading-relaxed">{copy.roleIntro}</p>
+
+            {copy.roleCards.map((guide) => (
+              <RoleCard key={guide.role} guide={guide} />
             ))}
-          </div>
-        </section>
-
-        <section className="space-y-4">
-          <div className="flex items-center gap-2 px-1">
-            <Building2 size={18} className="text-blue-600" />
-            <h2 className="text-xl font-bold text-slate-900">{copy.roleIntroTitle}</h2>
-          </div>
-          <p className="text-sm text-slate-500 px-1 leading-relaxed">{copy.roleIntro}</p>
-
-          {copy.roleCards.map((guide) => (
-            <RoleCard key={guide.role} guide={guide} />
-          ))}
-        </section>
+          </section>
+        )}
 
         <section className="grid lg:grid-cols-2 gap-4">
           <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">

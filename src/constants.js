@@ -2,9 +2,9 @@
 // COL_W to keep their X-axis (timeline) perfectly aligned.
 
 export const COL_W = 56 // width of one month column (px)
-export const ROW_H = 34 // height of one task row (px)
-export const HEADER_H = 40 // timeline header height (px)
-export const WBS_WIDTH = 430 // left WBS panel width (px)
+export const ROW_H = 26 // height of one task row (px)
+export const HEADER_H = 32 // timeline header height (px)
+export const WBS_WIDTH = 400 // left WBS panel width (px)
 
 // Bar colors by category group.
 export const GROUP_COLORS = {

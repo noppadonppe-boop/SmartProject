@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, useRef } from 'react'
 import { Building2, Plus, Pencil, CalendarRange, FileBarChart, ChevronDown, FolderKanban, ZoomIn, ZoomOut, Download, Printer, Activity, Undo2, Redo2, Flag, BarChart3 } from 'lucide-react'
 import { PROJECT_START } from '../data/mockData'
 import { fmtDate } from '../utils/dateUtils'
@@ -11,6 +11,7 @@ import GanttChart from './GanttChart'
 import ResourceHistogram from './ResourceHistogram'
 import ProjectModal from './ProjectModal'
 import TaskModal from './TaskModal'
+import { showAlert } from './GlobalDialog'
 
 // Base pixels-per-day per scale; multiplied by the zoom level.
 const BASE_PX_PER_DAY = { month: 56 / 30.4, week: 28 / 7 }
@@ -21,12 +22,11 @@ function addMonths(iso, n) {
   return d.toISOString().slice(0, 10)
 }
 
-export default function Dashboard({ data, companies = [], currentCompanyId = '', allowProjectCompanyChange = false }) {
+export default function Dashboard({ data, companies = [], currentCompanyId = '', allowProjectCompanyChange = false, onEditTask }) {
   const { projects, activeProject, activeProjectId, setActiveProjectId, tasks, upsertProject, upsertTask, deleteTask, saveBaseline, undo, redo, canUndo, canRedo } = data
-  const [projectModal, setProjectModal] = useState(null) // {project} edit | {} new | null
-  const [taskModal, setTaskModal] = useState(null) // {task} | {} for new | null
+
   const [scale, setScale] = useState('month') // 'month' | 'week'
-  const [zoom, setZoom] = useState(1) // 0.75 | 1 | 1.5
+  const [zoom, setZoom] = useState(0.75) // 0.75 | 1 | 1.5
   const [showCritical, setShowCritical] = useState(true)
   const [showBaseline, setShowBaseline] = useState(false)
   const [showHistogram, setShowHistogram] = useState(false)
@@ -60,9 +60,48 @@ export default function Dashboard({ data, companies = [], currentCompanyId = '',
     [tasks, projectStart, projectEnd]
   )
   const cpm = useMemo(
-    () => computeCriticalPath(tasks, projectStart),
-    [tasks, projectStart]
+    () => computeCriticalPath(tasks),
+    [tasks]
   )
+
+  // Drag-to-scroll logic
+  const scrollRef = useRef(null)
+  const isDown = useRef(false)
+  const startX = useRef(0)
+  const startY = useRef(0)
+  const scrollLeft = useRef(0)
+  const scrollTop = useRef(0)
+
+  const handleMouseDown = (e) => {
+    if (e.button !== 0) return
+    if (e.target.closest('button, input, select, .cursor-ew-resize, .cursor-move, .cursor-crosshair, .cursor-text, .bar-striped')) return
+    isDown.current = true
+    startX.current = e.pageX - scrollRef.current.offsetLeft
+    startY.current = e.pageY - scrollRef.current.offsetTop
+    scrollLeft.current = scrollRef.current.scrollLeft
+    scrollTop.current = scrollRef.current.scrollTop
+    scrollRef.current.style.cursor = 'grabbing'
+    scrollRef.current.style.userSelect = 'none'
+  }
+
+  const handleMouseLeaveOrUp = () => {
+    isDown.current = false
+    if (scrollRef.current) {
+      scrollRef.current.style.cursor = ''
+      scrollRef.current.style.userSelect = ''
+    }
+  }
+
+  const handleMouseMove = (e) => {
+    if (!isDown.current) return
+    e.preventDefault()
+    const x = e.pageX - scrollRef.current.offsetLeft
+    const y = e.pageY - scrollRef.current.offsetTop
+    const walkX = (x - startX.current) * 1.5
+    const walkY = (y - startY.current) * 1.5
+    scrollRef.current.scrollLeft = scrollLeft.current - walkX
+    scrollRef.current.scrollTop = scrollTop.current - walkY
+  }
 
   const lastActual = sCurve.rows[sCurve.dataDateIdx]
   const lastPlanned = lastActual?.planned ?? 0
@@ -70,57 +109,17 @@ export default function Dashboard({ data, companies = [], currentCompanyId = '',
   const variance = +(lastActualVal - lastPlanned).toFixed(1)
 
   return (
-    <div className="min-h-screen p-4 lg:p-6">
-      <div className="max-w-[1600px] mx-auto space-y-4">
-        {/* Top bar */}
-        <header className="flex flex-wrap items-center gap-3">
-          <div className="bg-blue-600 text-white p-2 rounded-lg">
-            <Building2 size={22} />
-          </div>
-          <div className="relative min-w-0">
-            <div className="flex items-center gap-2">
-              <FolderKanban size={16} className="text-slate-400 shrink-0" />
-              <select
-                value={activeProjectId || ''}
-                onChange={(e) => setActiveProjectId(e.target.value)}
-                className="text-lg font-bold bg-transparent outline-none cursor-pointer appearance-none pr-6 truncate max-w-[48ch]"
-              >
-                {projects.map((p) => (
-                  <option key={p.id} value={p.id}>{p.name}</option>
-                ))}
-              </select>
-              <ChevronDown size={16} className="text-slate-400 -ml-6 pointer-events-none" />
-            </div>
-            <p className="text-sm text-slate-500 flex items-center gap-2 pl-6">
-              <CalendarRange size={14} />
-              {fmtDate(activeProject?.startDate)} – {fmtDate(activeProject?.endDate)}
-              <span className="text-slate-300">|</span>
-              {activeProject?.owner}
-            </p>
-          </div>
-          <div className="flex-1" />
-          <button
-            onClick={() => setProjectModal({ project: activeProject })}
-            className="inline-flex items-center gap-1.5 px-3 py-2 text-sm rounded-lg border border-slate-300 bg-white hover:bg-slate-100"
-          >
-            <Pencil size={15} /> Edit Project
-          </button>
-          <button
-            onClick={() => setTaskModal({})}
-            className="inline-flex items-center gap-1.5 px-3 py-2 text-sm rounded-lg bg-blue-600 text-white font-medium hover:bg-blue-700"
-          >
-            <Plus size={16} /> Add Task
-          </button>
-        </header>
+    <div className="space-y-3">
+      <div className="max-w-[1600px] mx-auto space-y-3">
 
         {/* KPI cards */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-          <Kpi label="Planned Progress" value={`${lastPlanned}%`} accent="text-plan" />
-          <Kpi label="Actual Progress" value={`${lastActualVal}%`} accent="text-actual" />
+          <Kpi label="Actual Progress" value={`${lastActualVal}%`} accent="text-brand-600" />
+          <Kpi label="Planned Progress" value={`${lastPlanned}%`} accent="text-slate-700" />
           <Kpi
             label="Variance"
             value={`${variance > 0 ? '+' : ''}${variance}%`}
-            accent={variance < 0 ? 'text-red-600' : 'text-green-600'}
+            accent={variance < 0 ? 'text-red-500' : 'text-emerald-500'}
           />
           <Kpi label="Total Tasks" value={tasks.filter((t) => !t.isHeader).length} accent="text-slate-800" />
         </div>
@@ -144,10 +143,10 @@ export default function Dashboard({ data, companies = [], currentCompanyId = '',
         </div>
 
         {/* Unified Gantt + S-Curve */}
-        <div className="bg-white rounded-xl border border-slate-300 shadow-sm overflow-hidden schedule-card">
-          <div className="flex flex-wrap items-center gap-2 px-4 py-2.5 border-b border-slate-200 bg-slate-50">
-            <FileBarChart size={16} className="text-blue-600" />
-            <h2 className="text-sm font-semibold">Master Schedule — Gantt &amp; S-Curve</h2>
+        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden schedule-card">
+          <div className="flex flex-wrap items-center gap-2 px-5 py-3.5 border-b border-slate-100 bg-white">
+            <FileBarChart size={18} className="text-brand-600" />
+            <h2 className="text-[15px] font-display font-bold text-slate-800">Master Schedule — Gantt &amp; S-Curve</h2>
             <div className="flex-1" />
             {/* Undo / redo */}
             <div className="no-print inline-flex items-center gap-1">
@@ -170,7 +169,10 @@ export default function Dashboard({ data, companies = [], currentCompanyId = '',
             </div>
             {/* Baseline */}
             <button
-              onClick={saveBaseline}
+              onClick={async () => {
+                saveBaseline()
+                await showAlert('Save Set Baseline แล้ว', 'Success', 'success')
+              }}
               title="Save current plan as baseline"
               className="no-print inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs rounded-lg border border-slate-300 bg-white hover:bg-slate-100"
             >
@@ -230,12 +232,20 @@ export default function Dashboard({ data, companies = [], currentCompanyId = '',
               <Printer size={14} /> Print
             </button>
           </div>
-          <div className="flex overflow-auto scroll-thin schedule-scroll" style={{ maxHeight: '72vh' }}>
+          <div 
+            ref={scrollRef}
+            className="flex overflow-auto scroll-thin schedule-scroll" 
+            style={{ maxHeight: '72vh', cursor: 'grab' }}
+            onMouseDown={handleMouseDown}
+            onMouseLeave={handleMouseLeaveOrUp}
+            onMouseUp={handleMouseLeaveOrUp}
+            onMouseMove={handleMouseMove}
+          >
             <WbsTable
               tasks={tasks}
               cpm={cpm}
               showCritical={showCritical}
-              onEditTask={(t) => setTaskModal({ task: t })}
+              onEditTask={onEditTask}
               onDeleteTask={deleteTask}
               onUpdateTask={upsertTask}
             />
@@ -259,34 +269,15 @@ export default function Dashboard({ data, companies = [], currentCompanyId = '',
           <ResourceHistogram tasks={tasks} projectStart={projectStart} projectEnd={projectEnd} />
         )}
       </div>
-
-      {projectModal && (
-        <ProjectModal
-          project={projectModal.project}
-          companies={companies}
-          defaultCompanyId={activeProject?.companyId || currentCompanyId || ''}
-          currentCompanyId={currentCompanyId}
-          allowCompanyChange={allowProjectCompanyChange}
-          onClose={() => setProjectModal(null)}
-          onSave={upsertProject}
-        />
-      )}
-      {taskModal && (
-        <TaskModal
-          task={taskModal.task}
-          onClose={() => setTaskModal(null)}
-          onSave={upsertTask}
-        />
-      )}
     </div>
   )
 }
 
 function Kpi({ label, value, accent }) {
   return (
-    <div className="bg-white rounded-xl border border-slate-200 px-4 py-3 shadow-sm">
-      <div className="text-xs text-slate-500">{label}</div>
-      <div className={`text-2xl font-bold tabular-nums ${accent}`}>{value}</div>
+    <div className="bg-white rounded-xl border border-slate-200/60 px-4 py-2 shadow-sm flex flex-col justify-center">
+      <div className="text-[8px] font-bold text-slate-400 uppercase tracking-wider mb-1">{label}</div>
+      <div className={`text-2xl font-display font-bold tabular-nums tracking-tight ${accent}`}>{value}</div>
     </div>
   )
 }

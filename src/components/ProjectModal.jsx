@@ -3,6 +3,7 @@ import { Building2, Paperclip, Plus, Trash2, Upload, Loader2 } from 'lucide-reac
 import Modal, { Field, inputCls } from './Modal'
 import { USE_FIREBASE } from '../firebase'
 import { uploadAttachment } from '../services/dataService'
+import { showConfirm } from './GlobalDialog'
 
 const empty = {
   name: '',
@@ -22,6 +23,7 @@ export default function ProjectModal({
   allowCompanyChange = false,
   onClose,
   onSave,
+  onDelete,
 }) {
   const [form, setForm] = useState(
     project ? { ...empty, ...project, companyId: project.companyId || defaultCompanyId || '' } : { ...empty, companyId: defaultCompanyId || '' }
@@ -76,6 +78,19 @@ export default function ProjectModal({
     }
   }
 
+  const handleDelete = async () => {
+    if (!onDelete || !project?.id) return
+    const confirmed = await showConfirm(`Are you sure you want to delete project "${project.name}"? This will also delete all tasks associated with it.`, 'Delete Project', 'error')
+    if (confirmed) {
+      try {
+        await onDelete(project.id)
+        onClose()
+      } catch (err) {
+        console.error('Delete project failed', err)
+      }
+    }
+  }
+
   return (
     <Modal
       title={project ? 'Edit Project' : 'New Project'}
@@ -83,18 +98,27 @@ export default function ProjectModal({
       icon={Building2}
       onClose={onClose}
       footer={
-        <>
-          <button onClick={onClose} className="px-4 py-2 text-sm rounded-lg border border-slate-300 hover:bg-slate-100">
-            Cancel
-          </button>
-          <button
-            onClick={submit}
-            disabled={!form.name.trim() || !form.companyId}
-            className="px-4 py-2 text-sm rounded-lg bg-blue-600 text-white font-medium hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed"
-          >
-            {project ? 'Save Changes' : 'Create Project'}
-          </button>
-        </>
+        <div className="w-full flex items-center justify-between">
+          <div>
+            {project && onDelete && (
+              <button onClick={handleDelete} className="flex items-center gap-2 px-3 py-2 text-sm rounded-lg text-red-600 hover:bg-red-50 font-medium transition-colors">
+                <Trash2 size={16} /> Delete Project
+              </button>
+            )}
+          </div>
+          <div className="flex gap-2">
+            <button onClick={onClose} className="px-4 py-2 text-sm rounded-lg border border-slate-300 hover:bg-slate-100">
+              Cancel
+            </button>
+            <button
+              onClick={submit}
+              disabled={!form.name.trim() || !form.companyId}
+              className="px-4 py-2 text-sm rounded-lg bg-blue-600 text-white font-medium hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              {project ? 'Save Changes' : 'Create Project'}
+            </button>
+          </div>
+        </div>
       }
     >
       <div className="space-y-4">

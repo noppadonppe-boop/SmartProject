@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { ListTree, CalendarClock, CheckCircle2, Flag } from 'lucide-react'
 import Modal, { Field, inputCls } from './Modal'
+import { showAlert } from './GlobalDialog'
 
 const empty = {
   wbsCode: '',
@@ -32,10 +33,15 @@ export default function TaskModal({ task, onClose, onSave }) {
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }))
   const num = (k) => (e) => setForm((f) => ({ ...f, [k]: Number(e.target.value) }))
 
-  const submit = () => {
+  const submit = async () => {
     if (!form.taskName.trim()) return
-    onSave({ ...form, isHeader: form.group === 'header' }, task?.id)
-    onClose()
+    try {
+      const res = await onSave({ ...form, isHeader: form.group === 'header' }, task?.id)
+      if (res === false) return
+      onClose()
+    } catch (err) {
+      await showAlert(err.message, 'Error', 'error')
+    }
   }
 
   return (

@@ -3,7 +3,7 @@ import { Users, Search, Check, X, Pencil, ShieldCheck, Building2, ChevronDown } 
 import Modal, { Field, inputCls } from './Modal'
 import Avatar from './Avatar'
 import MultiSelect from './MultiSelect'
-import { ROLES, DEPARTMENTS, roleLabel } from '../auth/roles'
+import { ROLES, DEPARTMENTS, roleLabel, isMasterAdmin } from '../auth/roles'
 
 const STATUS_STYLES = {
   approved: 'bg-green-100 text-green-700',
@@ -42,8 +42,14 @@ export default function UserManagement({
   )
   const isCompanyMode = mode === 'company'
   const visibleUsers = useMemo(() => {
-    if (isCompanyMode) return users.filter((u) => u.companyId === scopeCompanyId)
-    return users
+    let list = users
+    if (isCompanyMode) {
+      list = list.filter((u) => !isMasterAdmin(u.role))
+      if (scopeCompanyId) {
+        list = list.filter((u) => u.companyId === scopeCompanyId)
+      }
+    }
+    return list
   }, [users, isCompanyMode, scopeCompanyId])
 
   const filtered = useMemo(() => {
@@ -105,41 +111,41 @@ export default function UserManagement({
       <div className="bg-white rounded-xl border border-slate-300 shadow-sm overflow-x-auto scroll-thin">
         <table className="w-full text-sm">
           <thead>
-            <tr className="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
-              <th className="px-4 py-3 font-semibold">User</th>
-              <th className="px-4 py-3 font-semibold">Position</th>
-              {!isCompanyMode && <th className="px-4 py-3 font-semibold min-w-[200px]">Company</th>}
-              <th className="px-4 py-3 font-semibold min-w-[200px]">Roles</th>
-              <th className="px-4 py-3 font-semibold min-w-[200px]">Assigned Projects</th>
-              <th className="px-4 py-3 font-semibold">Status</th>
-              {!isCompanyMode && <th className="px-4 py-3 font-semibold text-right">Actions</th>}
+            <tr className="bg-slate-50 text-left text-[10px] uppercase tracking-wide text-slate-500">
+              <th className="px-2 py-1 font-semibold">User</th>
+              <th className="px-2 py-1 font-semibold">Position</th>
+              {!isCompanyMode && <th className="px-2 py-1 font-semibold min-w-[180px]">Company</th>}
+              <th className="px-2 py-1 font-semibold min-w-[180px]">Roles</th>
+              {isCompanyMode && <th className="px-2 py-1 font-semibold min-w-[180px]">Assigned Projects</th>}
+              <th className="px-2 py-1 font-semibold">Status</th>
+              {!isCompanyMode && <th className="px-2 py-1 font-semibold text-right">Actions</th>}
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
             {filtered.map((u) => (
-              <tr key={u.email} className="align-top hover:bg-slate-50/60">
-                <td className="px-4 py-3">
-                  <div className="flex items-center gap-3">
-                    <Avatar profile={u} size={40} />
+              <tr key={u.email} className="align-middle hover:bg-slate-50/60">
+                <td className="px-2 py-0.5">
+                  <div className="flex items-center gap-2">
+                    <Avatar profile={u} size={24} />
                     <div className="min-w-0">
-                      <div className="font-medium text-slate-800 flex items-center gap-1">
+                      <div className="font-medium text-slate-800 flex items-center gap-1 text-[13px]">
                         {u.firstName} {u.lastName}
                         {u.isFirstUser && <ShieldCheck size={13} className="text-blue-500" title="Master Admin" />}
                       </div>
-                      <div className="text-xs text-slate-500 truncate">{u.email}</div>
+                      <div className="text-[10px] text-slate-500 truncate leading-none mt-0.5">{u.email}</div>
                     </div>
                   </div>
                 </td>
-                <td className="px-4 py-3 text-slate-600">
-                  <div>{u.position || '—'}</div>
-                  <div className="text-xs text-slate-400">{u.department || ''}</div>
+                <td className="px-2 py-0.5 text-slate-600">
+                  <div className="text-[13px]">{u.position || '—'}</div>
+                  <div className="text-[10px] text-slate-400 leading-none mt-0.5">{u.department || ''}</div>
                 </td>
                 {!isCompanyMode && (
-                  <td className="px-4 py-3">
+                  <td className="px-2 py-0.5">
                     <select
                       value={u.companyId || ''}
                       onChange={(e) => patchUser(u.email, { companyId: e.target.value })}
-                      className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full rounded border border-slate-300 bg-white px-1.5 py-0.5 text-[11px] h-6 focus:outline-none focus:ring-1 focus:ring-blue-500"
                     >
                       <option value="">Unassigned</option>
                       {companyOptions.map((c) => (
@@ -148,58 +154,63 @@ export default function UserManagement({
                     </select>
                   </td>
                 )}
-                <td className="px-4 py-3">
+                <td className="px-2 py-0.5">
                   {isCompanyMode ? (
-                    <div className="text-slate-600">{(u.role || []).map(roleLabel).join(', ') || '—'}</div>
+                    <div className="text-slate-600 text-[13px]">{(u.role || []).map(roleLabel).join(', ') || '—'}</div>
                   ) : (
                     <MultiSelect
                       options={ROLE_OPTIONS}
                       value={u.role || []}
                       onChange={(roles) => patchUser(u.email, { role: roles.length ? roles : ['User'] })}
                       placeholder="No roles"
+                      compact
                     />
                   )}
                 </td>
-                <td className="px-4 py-3">
-                  <MultiSelect
-                    options={projectOptions}
-                    value={u.assignedProjects || []}
-                    onChange={(ids) => patchUser(u.email, { assignedProjects: ids })}
-                    placeholder="No projects"
-                  />
-                </td>
-                <td className="px-4 py-3">
-                  <span className={`text-[11px] font-medium px-2 py-0.5 rounded-full capitalize ${STATUS_STYLES[u.status] || 'bg-slate-100 text-slate-600'}`}>
+                {isCompanyMode && (
+                  <td className="px-2 py-0.5">
+                    <MultiSelect
+                      options={projectOptions}
+                      value={u.assignedProjects || []}
+                      onChange={(ids) => patchUser(u.email, { assignedProjects: ids })}
+                      placeholder="No projects"
+                      compact
+                      showCountOnly
+                    />
+                  </td>
+                )}
+                <td className="px-2 py-0.5">
+                  <span className={`text-[9px] font-medium px-1.5 py-0.5 rounded capitalize ${STATUS_STYLES[u.status] || 'bg-slate-100 text-slate-600'}`}>
                     {u.status}
                   </span>
                 </td>
                 {!isCompanyMode && (
-                  <td className="px-4 py-3">
-                  <div className="flex items-center justify-end gap-1.5">
+                  <td className="px-2 py-0.5">
+                  <div className="flex items-center justify-end gap-1">
                     {u.status !== 'approved' && (
                       <button
                         onClick={() => patchUser(u.email, { status: 'approved' })}
                         title="Approve"
-                        className="p-1.5 rounded-lg border border-green-300 text-green-700 bg-green-50 hover:bg-green-100"
+                        className="p-0.5 rounded border border-green-300 text-green-700 bg-green-50 hover:bg-green-100"
                       >
-                        <Check size={15} />
+                        <Check size={13} />
                       </button>
                     )}
                     {u.status !== 'rejected' && (
                       <button
                         onClick={() => patchUser(u.email, { status: 'rejected' })}
                         title="Reject"
-                        className="p-1.5 rounded-lg border border-red-300 text-red-700 bg-red-50 hover:bg-red-100"
+                        className="p-0.5 rounded border border-red-300 text-red-700 bg-red-50 hover:bg-red-100"
                       >
-                        <X size={15} />
+                        <X size={13} />
                       </button>
                     )}
                     <button
                       onClick={() => setEditing(u)}
                       title="Edit details"
-                      className="p-1.5 rounded-lg border border-slate-300 bg-white hover:bg-slate-100 text-slate-600"
+                      className="p-0.5 rounded border border-slate-300 bg-white hover:bg-slate-100 text-slate-600"
                     >
-                      <Pencil size={15} />
+                      <Pencil size={13} />
                     </button>
                   </div>
                   </td>
@@ -207,7 +218,7 @@ export default function UserManagement({
               </tr>
             ))}
             {filtered.length === 0 && (
-              <tr><td colSpan={isCompanyMode ? 5 : 7} className="px-4 py-10 text-center text-slate-400">No users found.</td></tr>
+              <tr><td colSpan={isCompanyMode ? 5 : 6} className="px-4 py-10 text-center text-slate-400">No users found.</td></tr>
             )}
           </tbody>
         </table>

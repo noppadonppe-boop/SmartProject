@@ -16,9 +16,9 @@ export default function PendingApprovalPage() {
           approves your request.
         </p>
         <div className="mt-6 flex flex-col gap-2">
-          <button onClick={refreshProfile} className="inline-flex items-center justify-center gap-2 bg-blue-600 text-white font-medium rounded-lg py-2.5 hover:bg-blue-700">
-            <Loader2 size={16} /> Check status
-          </button>
+          <p className="text-xs text-slate-400 mb-2">
+            The system will automatically log you in once your account is approved.
+          </p>
           <button onClick={signOut} className="inline-flex items-center justify-center gap-2 border border-slate-300 rounded-lg py-2.5 text-sm font-medium hover:bg-slate-50">
             <LogOut size={16} /> Sign out
           </button>

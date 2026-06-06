@@ -30,25 +30,25 @@ export default function CompanyManagement({ companies = [], users = [], upsertCo
       <div className="bg-white rounded-xl border border-slate-300 shadow-sm overflow-x-auto scroll-thin">
         <table className="w-full text-sm">
           <thead>
-            <tr className="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
-              <th className="px-4 py-3 font-semibold">Company</th>
-              <th className="px-4 py-3 font-semibold">Code</th>
-              <th className="px-4 py-3 font-semibold">Contact</th>
-              <th className="px-4 py-3 font-semibold">Users</th>
-              <th className="px-4 py-3 font-semibold text-right">Actions</th>
+            <tr className="bg-slate-50 text-left text-[10px] uppercase tracking-wide text-slate-500">
+              <th className="px-2 py-1 font-semibold">Company</th>
+              <th className="px-2 py-1 font-semibold">Code</th>
+              <th className="px-2 py-1 font-semibold">Contact</th>
+              <th className="px-2 py-1 font-semibold">Users</th>
+              <th className="px-2 py-1 font-semibold text-right">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
             {companies.map((c) => (
-              <tr key={c.id} className="hover:bg-slate-50/60">
-                <td className="px-4 py-3 font-medium text-slate-800">{c.name}</td>
-                <td className="px-4 py-3 text-slate-600">{c.code || '—'}</td>
-                <td className="px-4 py-3 text-slate-600">{c.contact || '—'}</td>
-                <td className="px-4 py-3 text-slate-600">{companyUserCount[c.id] || 0}</td>
-                <td className="px-4 py-3">
-                  <div className="flex items-center justify-end gap-1.5">
-                    <button onClick={() => setModal({ company: c })} className="p-1.5 rounded-lg border border-slate-300 bg-white hover:bg-slate-100 text-slate-600"><Pencil size={15} /></button>
-                    <button onClick={() => removeCompany(c.id)} className="p-1.5 rounded-lg border border-red-300 bg-red-50 hover:bg-red-100 text-red-600"><Trash2 size={15} /></button>
+              <tr key={c.id} className="hover:bg-slate-50/60 align-middle">
+                <td className="px-2 py-1 font-medium text-[13px] text-slate-800">{c.name}</td>
+                <td className="px-2 py-1 text-[13px] text-slate-600">{c.code || '—'}</td>
+                <td className="px-2 py-1 text-[13px] text-slate-600">{c.contact || '—'}</td>
+                <td className="px-2 py-1 text-[13px] text-slate-600">{companyUserCount[c.id] || 0}</td>
+                <td className="px-2 py-1">
+                  <div className="flex items-center justify-end gap-1">
+                    <button onClick={() => setModal({ company: c })} className="p-1 rounded border border-slate-300 bg-white hover:bg-slate-100 text-slate-600"><Pencil size={13} /></button>
+                    <button onClick={() => removeCompany(c.id)} className="p-1 rounded border border-red-300 bg-red-50 hover:bg-red-100 text-red-600"><Trash2 size={13} /></button>
                   </div>
                 </td>
               </tr>

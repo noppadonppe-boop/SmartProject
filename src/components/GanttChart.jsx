@@ -3,10 +3,10 @@ import { LineChart, Line, XAxis, YAxis } from 'recharts'
 import { ROW_H, HEADER_H, GROUP_COLORS } from '../constants'
 import { dayOffset, buildMonthBands, buildWeekBands, dateFromOffset } from '../utils/dateUtils'
 
-const FOOTER_ROW_H = 24
-const HEADER_TOP = 22
-const BAR_TOP = 5
-const BAR_H = 11
+const FOOTER_ROW_H = 20
+const HEADER_TOP = 16
+const BAR_TOP = 9
+const BAR_H = 8
 const BAR_CY = BAR_TOP + BAR_H / 2 // plan-bar vertical center within a row
 
 export default function GanttChart({ tasks, projectStart, projectEnd, scale, pxPerDay, sCurve, cpm, showCritical, showBaseline, onUpdateTask }) {
@@ -187,7 +187,7 @@ export default function GanttChart({ tasks, projectStart, projectEnd, scale, pxP
   return (
     <div style={{ width }} className="relative">
       {/* Timeline header (two tiers) */}
-      <div className="sticky top-0 z-20 bg-slate-800 text-white relative" style={{ height: HEADER_H }}>
+      <div className="sticky top-0 z-20 bg-slate-800 text-white" style={{ height: HEADER_H, width }}>
         {/* Top tier: month + calendar */}
         <div className="absolute inset-x-0 top-0 border-b border-slate-700" style={{ height: HEADER_TOP }}>
           {monthBands.map((b) => (
@@ -285,13 +285,13 @@ export default function GanttChart({ tasks, projectStart, projectEnd, scale, pxP
               {act && t.actualStartDate && !t.milestone && (
                 <div
                   className="absolute rounded-sm bar-striped"
-                  style={{ left: act.left, width: act.width, top: 19, height: 8, backgroundColor: color, filter: 'brightness(0.7)' }}
+                  style={{ left: act.left, width: act.width, top: 17, height: 6, backgroundColor: color, filter: 'brightness(0.7)' }}
                   title={`${t.taskName} — Actual ${t.actualProgress}%`}
                 />
               )}
               {!t.isHeader && t.milestone && t.planStartDate && (
-                <div className="absolute" style={{ left: px(dayOffset(projectStart, t.planStartDate)) - 6, top: ROW_H / 2 - 6 }}>
-                  <div className="w-3 h-3 rotate-45 bg-amber-500 border border-amber-700" />
+                <div className="absolute" style={{ left: px(dayOffset(projectStart, t.planStartDate)) - 4, top: ROW_H / 2 - 4 }}>
+                  <div className="w-2 h-2 rotate-45 bg-amber-500 border border-amber-700" />
                 </div>
               )}
             </div>

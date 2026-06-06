@@ -123,6 +123,19 @@ export async function saveProject(id, data, previousCompanyId = '') {
   await deleteDoc(legacyProjectDoc(id))
 }
 
+export async function removeProject(id, companyId) {
+  if (companyId) {
+    await deleteDoc(companyProjectDoc(companyId, id))
+  }
+  await deleteDoc(legacyProjectDoc(id))
+  
+  // Clean up all tasks associated with this project
+  const q = query(collection(db, COLLECTIONS.TASKS), where('projectId', '==', id))
+  const snap = await getDocs(q)
+  const batch = snap.docs.map(d => deleteDoc(d.ref))
+  await Promise.all(batch)
+}
+
 export async function createTask(data) {
   const ref = await addDoc(collection(db, COLLECTIONS.TASKS), { ...data, updatedAt: serverTimestamp() })
   return { id: ref.id, ...data }

@@ -19,7 +19,7 @@ export function monthFraction(projectStartISO, dateISO) {
   return whole + (d.getDate() - 1) / daysInMonth
 }
 
-// Build month labels: ["M1","M2",...] plus calendar label "Jan 25".
+// Build month labels: ["M1","M2",...] plus calendar label "Jan".
 export function buildMonths(projectStartISO, totalMonths) {
   const out = []
   for (let i = 0; i < totalMonths; i++) {
@@ -28,7 +28,7 @@ export function buildMonths(projectStartISO, totalMonths) {
     out.push({
       index: i + 1,
       label: `M${i + 1}`,
-      calendar: d.toLocaleDateString('en-US', { month: 'short', year: '2-digit' }),
+      calendar: d.toLocaleDateString('en-US', { month: 'short' }),
     })
   }
   return out
@@ -81,7 +81,7 @@ export function buildMonthBands(startISO, endISO) {
     bands.push({
       index: ++i,
       label: `M${i}`,
-      calendar: cursor.toLocaleDateString('en-US', { month: 'short', year: '2-digit' }),
+      calendar: cursor.toLocaleDateString('en-US', { month: 'short' }),
       startOffset: dayOffset(startISO, from.toISOString().slice(0, 10)),
       days: Math.round((to - from) / MS_PER_DAY) + 1,
     })

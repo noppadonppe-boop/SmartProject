@@ -82,6 +82,7 @@ export function useUsers(companyId = '') {
       return
     }
     setUsers((list) => list.map((u) => (u.email === email ? { ...u, ...patch } : u)))
+    window.dispatchEvent(new CustomEvent('mock-profile-update', { detail: { email, patch } }))
   }, [])
 
   const pendingCount = users.filter((u) => u.status === 'pending').length

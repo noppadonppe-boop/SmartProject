@@ -4,7 +4,7 @@ import { Check, ChevronDown } from 'lucide-react'
 
 // Reusable multi-select dropdown. Used for assigning multiple Roles and
 // multiple Projects to a user. Panel renders at z-[10010] per spec.
-export default function MultiSelect({ options, value = [], onChange, placeholder = 'Select…', renderLabel }) {
+export default function MultiSelect({ options, value = [], onChange, placeholder = 'Select…', renderLabel, compact, showCountOnly }) {
   const [open, setOpen] = useState(false)
   const ref = useRef(null)
   const panelRef = useRef(null)
@@ -67,15 +67,18 @@ export default function MultiSelect({ options, value = [], onChange, placeholder
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="w-full min-w-[160px] flex items-center justify-between gap-2 rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 text-sm hover:bg-slate-50"
+        className={`w-full min-w-[160px] flex items-center justify-between gap-2 border border-slate-300 bg-white hover:bg-slate-50 ${compact ? 'px-1.5 py-0 text-[11px] rounded min-h-[22px]' : 'px-2.5 py-1.5 text-sm rounded-lg'}`}
       >
-        <span className="flex flex-wrap gap-1 min-h-[20px] items-center text-left">
+        <span className={`flex flex-wrap gap-0.5 items-center text-left py-0.5 ${compact ? 'min-h-[14px]' : 'min-h-[20px]'}`}>
           {selectedLabels.length === 0 && <span className="text-slate-400">{placeholder}</span>}
-          {selectedLabels.map((l) => (
-            <span key={l} className="text-[11px] leading-none px-1.5 py-0.5 rounded-full bg-blue-100 text-blue-700">{l}</span>
+          {selectedLabels.length > 0 && showCountOnly && (
+            <span className={`leading-none rounded-full bg-blue-100 text-blue-700 ${compact ? 'text-[10px] px-1.5 py-0.5' : 'text-[11px] px-2 py-0.5'}`}>{selectedLabels.length} selected</span>
+          )}
+          {selectedLabels.length > 0 && !showCountOnly && selectedLabels.map((l) => (
+            <span key={l} className={`leading-none rounded-full bg-blue-100 text-blue-700 ${compact ? 'text-[10px] px-1 py-0.5' : 'text-[11px] px-1.5 py-0.5'}`}>{l}</span>
           ))}
         </span>
-        <ChevronDown size={15} className="text-slate-400 shrink-0" />
+        <ChevronDown size={compact ? 13 : 15} className="text-slate-400 shrink-0" />
       </button>
 
       {open && (
