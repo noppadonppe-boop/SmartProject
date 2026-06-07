@@ -1,0 +1,15 @@
+{
+  "projects": {
+    "default": "technology-partner"
+  },
+  "targets": {
+    "technology-partner": {
+      "hosting": {
+        "site-02": [
+          "smart-planning"
+        ]
+      }
+    }
+  },
+  "etags": {}
+}

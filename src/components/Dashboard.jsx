@@ -11,7 +11,11 @@ import GanttChart from './GanttChart'
 import ResourceHistogram from './ResourceHistogram'
 import ProjectModal from './ProjectModal'
 import TaskModal from './TaskModal'
+import SetBaselineModal from './SetBaselineModal'
+import SelectBaselineModal from './SelectBaselineModal'
+import PrintModal from './PrintModal'
 import { showAlert } from './GlobalDialog'
+import { useAuth } from '../auth/AuthContext'
 
 // Base pixels-per-day per scale; multiplied by the zoom level.
 const BASE_PX_PER_DAY = { month: 56 / 30.4, week: 28 / 7 }
@@ -25,11 +29,16 @@ function addMonths(iso, n) {
 export default function Dashboard({ data, companies = [], currentCompanyId = '', allowProjectCompanyChange = false, onEditTask }) {
   const { projects, activeProject, activeProjectId, setActiveProjectId, tasks, upsertProject, upsertTask, deleteTask, saveBaseline, undo, redo, canUndo, canRedo } = data
 
+  const { userProfile } = useAuth()
   const [scale, setScale] = useState('month') // 'month' | 'week'
   const [zoom, setZoom] = useState(0.75) // 0.75 | 1 | 1.5
   const [showCritical, setShowCritical] = useState(true)
-  const [showBaseline, setShowBaseline] = useState(false)
-  const [showHistogram, setShowHistogram] = useState(false)
+  const [showSetBaselineModal, setShowSetBaselineModal] = useState(false)
+  const [showSelectBaselineModal, setShowSelectBaselineModal] = useState(false)
+  const [showPrintModal, setShowPrintModal] = useState(false)
+  const [selectedBaselineRev, setSelectedBaselineRev] = useState(null)
+  const [showHistogram, setShowHistogram] = useState(true)
+  const [wbsSortDir, setWbsSortDir] = useState(null) // 'asc' | 'desc' | null
 
   // Keyboard shortcuts: Ctrl/Cmd+Z undo, Ctrl+Shift+Z or Ctrl+Y redo.
   useEffect(() => {
@@ -60,9 +69,33 @@ export default function Dashboard({ data, companies = [], currentCompanyId = '',
     [tasks, projectStart, projectEnd]
   )
   const cpm = useMemo(
-    () => computeCriticalPath(tasks),
-    [tasks]
+    () => computeCriticalPath(tasks, projectStart),
+    [tasks, projectStart]
   )
+
+  const sortedTasks = useMemo(() => {
+    if (!wbsSortDir) return tasks;
+    return [...tasks].sort((a, b) => {
+      const cmp = (a.wbsCode || '').localeCompare(b.wbsCode || '', undefined, { numeric: true });
+      return wbsSortDir === 'asc' ? cmp : -cmp;
+    });
+  }, [tasks, wbsSortDir]);
+
+  const tasksWithBaseline = useMemo(() => {
+    if (selectedBaselineRev === null || !activeProject?.baselines) return sortedTasks;
+    if (selectedBaselineRev === 'legacy') return sortedTasks;
+
+    const baseline = activeProject.baselines.find(b => b.rev === selectedBaselineRev);
+    if (!baseline) return sortedTasks;
+
+    return sortedTasks.map(t => {
+      const bDates = baseline.taskDates[t.id];
+      if (bDates) {
+        return { ...t, baselineStartDate: bDates.baselineStartDate, baselineEndDate: bDates.baselineEndDate };
+      }
+      return { ...t, baselineStartDate: null, baselineEndDate: null };
+    });
+  }, [sortedTasks, activeProject?.baselines, selectedBaselineRev]);
 
   // Drag-to-scroll logic
   const scrollRef = useRef(null)
@@ -103,6 +136,63 @@ export default function Dashboard({ data, companies = [], currentCompanyId = '',
     scrollRef.current.scrollTop = scrollTop.current - walkY
   }
 
+  const executePrint = ({ paperSize, fitToPage }) => {
+    const paperPx = paperSize === 'A3' ? 1526 : 1062;
+    const scrollWidth = scrollRef.current?.scrollWidth || paperPx;
+    // Some browsers apply print scaling automatically, but zoom helps ensure it fits.
+    // We add a little margin of safety (0.98)
+    const scaleFactor = fitToPage ? Math.min(1, (paperPx * 0.98) / scrollWidth) : 1;
+
+    const styleId = 'dynamic-print-style';
+    let styleEl = document.getElementById(styleId);
+    if (!styleEl) {
+      styleEl = document.createElement('style');
+      styleEl.id = styleId;
+      document.head.appendChild(styleEl);
+    }
+
+    styleEl.innerHTML = `
+      @media print {
+        @page {
+          size: ${paperSize} landscape !important;
+          margin: 8mm;
+        }
+        .schedule-scroll {
+          zoom: ${scaleFactor} !important;
+          max-height: none !important;
+          overflow: visible !important;
+        }
+        /* Hide non-schedule elements */
+        .histogram-container {
+          display: none !important;
+        }
+        /* Make KPIs smaller and single row when printing */
+        .kpi-container {
+          grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+          gap: 0.25rem !important;
+        }
+        .kpi-container > div {
+          padding: 0.25rem 0.5rem !important;
+        }
+        .kpi-container .text-2xl {
+          font-size: 1rem !important;
+          line-height: 1.5rem !important;
+        }
+        .legend-container {
+          margin-top: 0.25rem !important;
+          margin-bottom: 0.25rem !important;
+        }
+      }
+    `;
+
+    setShowPrintModal(false);
+    
+    // Slight delay to ensure React unmounts modal and CSS applies
+    setTimeout(() => {
+      window.print();
+    }, 150);
+  };
+
   const lastActual = sCurve.rows[sCurve.dataDateIdx]
   const lastPlanned = lastActual?.planned ?? 0
   const lastActualVal = lastActual?.actual ?? 0
@@ -113,7 +203,7 @@ export default function Dashboard({ data, companies = [], currentCompanyId = '',
       <div className="max-w-[1600px] mx-auto space-y-3">
 
         {/* KPI cards */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 kpi-container">
           <Kpi label="Actual Progress" value={`${lastActualVal}%`} accent="text-brand-600" />
           <Kpi label="Planned Progress" value={`${lastPlanned}%`} accent="text-slate-700" />
           <Kpi
@@ -125,7 +215,7 @@ export default function Dashboard({ data, companies = [], currentCompanyId = '',
         </div>
 
         {/* Legend */}
-        <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-slate-600">
+        <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-slate-600 legend-container">
           {Object.entries(GROUP_LABELS).map(([k, label]) => (
             <span key={k} className="inline-flex items-center gap-1.5">
               <span className="w-4 h-3 rounded-sm" style={{ backgroundColor: GROUP_COLORS[k] }} /> {label}
@@ -169,18 +259,15 @@ export default function Dashboard({ data, companies = [], currentCompanyId = '',
             </div>
             {/* Baseline */}
             <button
-              onClick={async () => {
-                saveBaseline()
-                await showAlert('Save Set Baseline แล้ว', 'Success', 'success')
-              }}
+              onClick={() => setShowSetBaselineModal(true)}
               title="Save current plan as baseline"
               className="no-print inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs rounded-lg border border-slate-300 bg-white hover:bg-slate-100"
             >
               <Flag size={14} /> Set Baseline
             </button>
             <button
-              onClick={() => setShowBaseline((v) => !v)}
-              className={`no-print inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs rounded-lg border ${showBaseline ? 'border-violet-300 bg-violet-50 text-violet-700' : 'border-slate-300 bg-white hover:bg-slate-100'}`}
+              onClick={() => setShowSelectBaselineModal(true)}
+              className={`no-print inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs rounded-lg border ${selectedBaselineRev !== null ? 'border-violet-300 bg-violet-50 text-violet-700' : 'border-slate-300 bg-white hover:bg-slate-100'}`}
             >
               Baseline
             </button>
@@ -226,7 +313,7 @@ export default function Dashboard({ data, companies = [], currentCompanyId = '',
               <Download size={14} /> CSV
             </button>
             <button
-              onClick={() => window.print()}
+              onClick={() => setShowPrintModal(true)}
               className="no-print inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs rounded-lg border border-slate-300 bg-white hover:bg-slate-100"
             >
               <Printer size={14} /> Print
@@ -242,15 +329,17 @@ export default function Dashboard({ data, companies = [], currentCompanyId = '',
             onMouseMove={handleMouseMove}
           >
             <WbsTable
-              tasks={tasks}
+              tasks={sortedTasks}
               cpm={cpm}
               showCritical={showCritical}
               onEditTask={onEditTask}
               onDeleteTask={deleteTask}
               onUpdateTask={upsertTask}
+              wbsSortDir={wbsSortDir}
+              onToggleWbsSort={() => setWbsSortDir(prev => prev === null ? 'asc' : prev === 'asc' ? 'desc' : null)}
             />
             <GanttChart
-              tasks={tasks}
+              tasks={tasksWithBaseline}
               projectStart={projectStart}
               projectEnd={projectEnd}
               scale={scale}
@@ -258,7 +347,7 @@ export default function Dashboard({ data, companies = [], currentCompanyId = '',
               sCurve={sCurve}
               cpm={cpm}
               showCritical={showCritical}
-              showBaseline={showBaseline}
+              showBaseline={selectedBaselineRev !== null}
               onUpdateTask={upsertTask}
             />
           </div>
@@ -266,9 +355,41 @@ export default function Dashboard({ data, companies = [], currentCompanyId = '',
 
         {/* Resource workload histogram */}
         {showHistogram && (
-          <ResourceHistogram tasks={tasks} projectStart={projectStart} projectEnd={projectEnd} />
+          <div className="histogram-container">
+            <ResourceHistogram tasks={tasks} projectStart={projectStart} projectEnd={projectEnd} />
+          </div>
         )}
       </div>
+
+      {/* Modals */}
+      {showSetBaselineModal && (
+        <SetBaselineModal
+          onClose={() => setShowSetBaselineModal(false)}
+          userProfile={userProfile}
+          defaultName={`Rev.${(activeProject?.baselines?.length || 0) + 1}`}
+          onConfirm={async (name, date) => {
+            await saveBaseline(name, date, userProfile?.email)
+            setShowSetBaselineModal(false)
+            showAlert('Save Set Baseline แล้ว', 'Success', 'success')
+          }}
+        />
+      )}
+      {showSelectBaselineModal && (
+        <SelectBaselineModal
+          baselines={activeProject?.baselines || []}
+          selectedRev={selectedBaselineRev}
+          onClose={() => setShowSelectBaselineModal(false)}
+          onSelect={(rev) => setSelectedBaselineRev(rev)}
+          onClear={() => setSelectedBaselineRev(null)}
+        />
+      )}
+      {showPrintModal && (
+        <PrintModal
+          onClose={() => setShowPrintModal(false)}
+          onPrint={executePrint}
+          scheduleWidth={scrollRef.current?.scrollWidth || 1200}
+        />
+      )}
     </div>
   )
 }

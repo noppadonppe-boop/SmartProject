@@ -207,6 +207,7 @@ export default function AppShell() {
       {taskModal && (
         <TaskModal
           task={taskModal.task}
+          tasks={data.tasks}
           onClose={() => setTaskModal(null)}
           onSave={data.upsertTask}
         />

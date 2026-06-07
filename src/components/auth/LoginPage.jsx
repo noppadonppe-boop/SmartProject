@@ -1,6 +1,7 @@
 import { useState } from 'react'
-import { Building2, Mail, Lock, LogIn, Loader2 } from 'lucide-react'
+import { Check, Loader2 } from 'lucide-react'
 import { useAuth } from '../../auth/AuthContext'
+import AuthLayout from './AuthLayout'
 
 const ERROR_MAP = {
   'auth/invalid-credential': 'Email or password is incorrect.',
@@ -11,8 +12,7 @@ const ERROR_MAP = {
   'auth/popup-closed-by-user': 'Google sign-in was cancelled.',
   'auth/unauthorized-domain': 'This domain is not authorized for Google sign-in.',
 }
-const msgFor = (err) =>
-  ERROR_MAP[err?.code] || err?.message?.replace('Firebase: ', '') || 'Authentication failed.'
+const msgFor = (err) => ERROR_MAP[err?.code] || err?.message?.replace('Firebase: ', '') || 'Authentication failed.'
 
 export default function LoginPage({ onGoRegister, rejected }) {
   const { loginWithEmail, loginWithGoogle, refreshProfile } = useAuth()
@@ -42,51 +42,60 @@ export default function LoginPage({ onGoRegister, rejected }) {
     } finally { setBusy(false) }
   }
 
-  const input = 'w-full rounded-lg border border-slate-300 pl-9 pr-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500'
-
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-100 p-4">
-      <div className="w-full max-w-sm bg-white rounded-2xl shadow-xl border border-slate-200 p-7">
-        <div className="flex items-center gap-3 mb-6">
-          <div className="bg-blue-600 text-white p-2 rounded-lg"><Building2 size={22} /></div>
-          <div>
-            <h1 className="text-lg font-bold">SmartProject</h1>
-            <p className="text-xs text-slate-500">Sign in to your projects</p>
-          </div>
-        </div>
-
-        {rejected && (
-          <p className="mb-3 text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
-            Your account access was rejected. Please contact an administrator.
-          </p>
-        )}
-
-        <form onSubmit={submit} className="space-y-3">
-          <div className="relative">
-            <Mail size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-            <input className={input} type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} required />
-          </div>
-          <div className="relative">
-            <Lock size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-            <input className={input} type="password" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} required />
-          </div>
-
-          {error && <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{error}</p>}
-
-          <button type="submit" disabled={busy} className="w-full inline-flex items-center justify-center gap-2 bg-blue-600 text-white font-medium rounded-lg py-2.5 hover:bg-blue-700 disabled:opacity-60">
-            {busy ? <Loader2 size={16} className="animate-spin" /> : <LogIn size={16} />} Sign In
-          </button>
-        </form>
-
-        <button onClick={google} disabled={busy} className="mt-3 w-full inline-flex items-center justify-center gap-2 border border-slate-300 rounded-lg py-2.5 text-sm font-medium hover:bg-slate-50 disabled:opacity-60">
-          <span className="font-bold text-base text-blue-600">G</span> Continue with Google
-        </button>
-
-        <p className="mt-5 text-center text-sm text-slate-500">
-          Don't have an account?{' '}
-          <button onClick={onGoRegister} className="text-blue-600 font-medium hover:underline">Sign up</button>
-        </p>
+  const InputRow = ({ label, type, placeholder, value, onChange }) => (
+    <div className="mb-6">
+      <label className="block text-sm font-bold text-slate-800 mb-1.5">{label}</label>
+      <div className="relative">
+        <input 
+          type={type} 
+          placeholder={placeholder} 
+          value={value} 
+          onChange={onChange} 
+          required
+          className="w-full border-b-2 border-blue-200 pb-2.5 text-base focus:outline-none focus:border-blue-500 bg-transparent placeholder-slate-300 text-slate-800 transition-colors"
+        />
+        {value.length > 0 && <Check size={18} className="absolute right-0 top-0 text-blue-500" />}
       </div>
     </div>
+  )
+
+  return (
+    <AuthLayout>
+      <h2 className="text-2xl md:text-[28px] font-extrabold text-slate-800 mb-10 md:mb-12 text-center tracking-tight">Login to your account</h2>
+
+      {rejected && (
+        <p className="mb-6 text-sm text-red-600 bg-red-50 border border-red-200 p-4 rounded-lg font-medium">
+          Your account access was rejected. Please contact an administrator.
+        </p>
+      )}
+
+      <form onSubmit={submit}>
+        <InputRow label="E-mail Adress" type="email" placeholder="Enter your mail" value={email} onChange={(e) => setEmail(e.target.value)} />
+        <InputRow label="Password" type="password" placeholder="Enter your password" value={password} onChange={(e) => setPassword(e.target.value)} />
+
+        {error && <p className="mb-6 text-sm font-medium text-red-600 bg-red-50 p-3 rounded-lg border border-red-100">{error}</p>}
+
+        <div className="flex gap-4 mt-10">
+          <button type="button" onClick={onGoRegister} disabled={busy} className="flex-1 bg-white hover:bg-slate-50 text-slate-600 border-2 border-slate-200 font-bold py-3 rounded-full text-base transition-colors">
+            Sign Up
+          </button>
+          <button type="submit" disabled={busy} className="flex-[1.2] flex items-center justify-center bg-[#1565D8] hover:bg-blue-700 text-white font-bold py-3 rounded-full text-base shadow-lg hover:shadow-xl transition-all disabled:opacity-70">
+            {busy ? <Loader2 size={18} className="animate-spin mr-2" /> : null} Sign In
+          </button>
+        </div>
+      </form>
+
+      <div className="mt-8 flex justify-center">
+        <button onClick={google} disabled={busy} className="w-full bg-[#f2f2f2] hover:bg-[#e5e5e5] text-[#1f1f1f] text-base font-semibold py-3 px-4 rounded-full flex items-center justify-center gap-3 transition-colors">
+          <svg viewBox="0 0 48 48" width="24" height="24">
+            <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
+            <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
+            <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
+            <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
+          </svg>
+          Sign in with Google
+        </button>
+      </div>
+    </AuthLayout>
   )
 }

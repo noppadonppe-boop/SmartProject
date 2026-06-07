@@ -134,12 +134,12 @@ export function useProjectData(user, userProfile, headerCompanyId = '') {
         if (id) {
           await svc.saveProject(id, payload, existing?.companyId)
           setProjects((p) => p.map((x) => (x.id === id ? { ...x, ...payload } : x)))
-          logActivity('PROJECT_UPDATE', { email: user?.email, projectName: payload.name })
+          logActivity('PROJECT_UPDATE', { email: user?.email || null, projectName: payload.name || existing?.name || null })
         } else {
           const created = await svc.createProject(payload)
           setProjects((p) => p.some(x => x.id === created.id) ? p : [...p, created])
           setActiveProjectId(created.id)
-          logActivity('PROJECT_CREATE', { email: user?.email, projectName: payload.name })
+          logActivity('PROJECT_CREATE', { email: user?.email || null, projectName: payload.name || null })
 
           if (user?.email && userProfile) {
             const currentAssigned = userProfile.assignedProjects || []
@@ -179,7 +179,7 @@ export function useProjectData(user, userProfile, headerCompanyId = '') {
       if (USE_FIREBASE) {
         await svc.removeProject(id, existing.companyId)
         setProjects((p) => p.filter((x) => x.id !== id))
-        logActivity('PROJECT_DELETE', { email: user?.email, projectName: existing.name })
+        logActivity('PROJECT_DELETE', { email: user?.email || null, projectName: existing.name || null })
       } else {
         setProjects((p) => p.filter((x) => x.id !== id))
       }
@@ -237,7 +237,7 @@ export function useProjectData(user, userProfile, headerCompanyId = '') {
           }
         }
 
-        logActivity('PROJECT_CREATE', { email: user?.email, projectName: newName })
+        logActivity('PROJECT_CREATE', { email: user?.email || null, projectName: newName || null })
         setProjects((p) => p.some(x => x.id === createdProject.id) ? p : [...p, createdProject])
         setActiveProjectId(createdProject.id)
       } else {
@@ -331,22 +331,38 @@ export function useProjectData(user, userProfile, headerCompanyId = '') {
   }, [pushHistory])
 
   // ---- Baseline ----
-  const saveBaseline = useCallback(() => {
+  const saveBaseline = useCallback(async (baselineName, dateStr, userEmail) => {
     pushHistory()
-    setTasks((ts) =>
-      ts.map((t) => {
-        if (t.projectId !== activeProjectId || t.isHeader || !t.planStartDate) return t
-        const updated = { ...t, baselineStartDate: t.planStartDate, baselineEndDate: t.planEndDate }
-        if (USE_FIREBASE) {
-          svc.saveTask(t.id, {
-            baselineStartDate: updated.baselineStartDate,
-            baselineEndDate: updated.baselineEndDate,
-          })
-        }
-        return updated
-      })
-    )
-  }, [activeProjectId, pushHistory])
+    
+    // Construct task dates snapshot
+    const taskDates = {}
+    tasksRef.current.forEach((t) => {
+      if (t.projectId !== activeProjectId || t.isHeader || !t.planStartDate) return
+      taskDates[t.id] = {
+        baselineStartDate: t.planStartDate || null,
+        baselineEndDate: t.planEndDate || null,
+      }
+    })
+
+    const existingProject = projectsRef.current.find(p => p.id === activeProjectId)
+    if (!existingProject) return
+
+    const currentBaselines = existingProject.baselines || []
+    const nextRev = currentBaselines.length + 1
+
+    const newBaseline = {
+      rev: nextRev,
+      name: baselineName || `Revision ${nextRev}`,
+      date: dateStr || new Date().toISOString().slice(0, 10),
+      setBy: userEmail || user?.email || 'Unknown User',
+      taskDates
+    }
+
+    const updatedBaselines = [...currentBaselines, newBaseline]
+
+    // Save to project
+    await upsertProject({ baselines: updatedBaselines }, activeProjectId)
+  }, [activeProjectId, upsertProject, pushHistory, user?.email])
 
   return {
     loading,

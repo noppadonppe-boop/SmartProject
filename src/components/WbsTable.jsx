@@ -47,7 +47,7 @@ function InlineEdit({ value, type = 'text', onCommit, className = '', display })
   )
 }
 
-export default function WbsTable({ tasks, cpm, showCritical, onEditTask, onDeleteTask, onUpdateTask }) {
+export default function WbsTable({ tasks, cpm, showCritical, onEditTask, onDeleteTask, onUpdateTask, wbsSortDir, onToggleWbsSort }) {
   const totalWeight = tasks.reduce((sum, t) => sum + (!t.isHeader ? Number(t.weight || 0) : 0), 0)
 
   return (
@@ -57,7 +57,16 @@ export default function WbsTable({ tasks, cpm, showCritical, onEditTask, onDelet
         className="sticky top-0 z-20 flex items-center bg-slate-800 text-white text-[10px] font-semibold uppercase tracking-wide"
         style={{ height: HEADER_H }}
       >
-        <div className="px-2 shrink-0" style={{ width: 48 }}>WBS</div>
+        <div 
+          className={`px-2 shrink-0 flex items-center gap-1 ${onToggleWbsSort ? 'cursor-pointer hover:text-blue-300 transition-colors' : ''}`} 
+          style={{ width: 48 }}
+          onClick={onToggleWbsSort}
+          title="Click to sort by WBS"
+        >
+          WBS
+          {wbsSortDir === 'asc' && <span className="text-[14px] leading-none text-blue-400">↑</span>}
+          {wbsSortDir === 'desc' && <span className="text-[14px] leading-none text-blue-400">↓</span>}
+        </div>
         <div className="px-2 flex-1">Task Name</div>
         <div className="px-1 text-center shrink-0 leading-tight" style={{ width: 52 }}>
           <div>Wt%</div>

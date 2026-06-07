@@ -78,10 +78,12 @@ const CONTENT = {
         title: '2) Set Baseline และ Baseline',
         intro: 'Set Baseline คือการบันทึกแผนปัจจุบันไว้เป็นเส้นอ้างอิง เพื่อใช้เทียบกับแผนที่ปรับในภายหลัง',
         bullets: [
-          'จัดแผนงานให้เรียบร้อยก่อน แล้วกด Set Baseline',
-          'กดปุ่ม Baseline เพื่อแสดงเส้น/แท่ง baseline บนแผนงาน',
-          'ใช้มุมมองนี้เพื่อดูว่ากิจกรรมใดเลื่อนจากแผนเดิมมากน้อยแค่ไหน',
-          'ดูค่า variance ของงานเพื่อช่วยตัดสินใจว่าควรเร่งหรือปรับแผน',
+          'จัดแผนงานให้เรียบร้อยก่อน แล้วกดปุ่ม Set Baseline',
+          'จะมีหน้าต่างให้ตั้งชื่อ Revision และวันที่บันทึก (ชื่อของคุณจะถูกบันทึกด้วย)',
+          'เมื่อต้องการดูแผนอ้างอิง ให้กดปุ่ม Baseline',
+          'จะมีหน้าต่างให้เลือกเปิดดู Baseline ของ Revision ใดๆ ที่เคยบันทึกไว้',
+          'เส้น/แท่ง baseline สีเทาโปร่งแสงจะปรากฏซ้อนอยู่ใต้งานจริงบน Gantt Chart',
+          'ตัวอย่าง: หลังจากแก้ Plan End ของงานหนึ่ง ให้เปิด Baseline เพื่อเทียบว่าช้ากว่าแผนเดิมกี่วัน',
         ],
         examples: [
           'ตัวอย่าง: หลังจากแก้ Plan End ของงานหนึ่ง ให้เปิด Baseline เพื่อเทียบว่าช้ากว่าแผนเดิมกี่วัน',
@@ -293,9 +295,10 @@ const CONTENT = {
         intro: 'Set Baseline captures the current plan as a reference so you can compare future updates against it.',
         bullets: [
           'Finish the current plan before clicking Set Baseline.',
-          'Turn on Baseline to show the baseline bar/line on the schedule.',
+          'A modal will appear to set the Revision name and date (your name will be recorded).',
+          'Turn on Baseline to select and show the baseline bar/line on the schedule.',
+          'A modal will let you choose any previously saved Revision to display.',
           'Use it to compare how far each task has moved from the original plan.',
-          'Review the variance values to see whether an activity is early or late.',
         ],
         examples: [
           'Example: If you change a task end date later, open Baseline to see how many days it slipped.',

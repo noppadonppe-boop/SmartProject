@@ -25,6 +25,9 @@ const companyProjectsCol = (companyId) => collection(db, APP_NAME, 'root', 'comp
 const companyProjectDoc = (companyId, id) => doc(db, APP_NAME, 'root', 'companies', companyId, COLLECTIONS.PROJECTS, id)
 const legacyProjectDoc = (id) => doc(db, LEGACY_PROJECTS, id)
 
+const tasksCol = () => collection(db, APP_NAME, 'root', COLLECTIONS.TASKS)
+const taskDoc = (id) => doc(db, APP_NAME, 'root', COLLECTIONS.TASKS, id)
+
 function mapDocs(snap) {
   return snap.docs.map((d) => ({ id: d.id, ...d.data() }))
 }
@@ -46,7 +49,7 @@ export async function fetchProjects() {
 }
 
 export async function fetchTasks(projectId) {
-  const q = query(collection(db, COLLECTIONS.TASKS), where('projectId', '==', projectId))
+  const q = query(tasksCol(), where('projectId', '==', projectId))
   const snap = await getDocs(q)
   return snap.docs.map((d) => ({ id: d.id, ...d.data() }))
 }
@@ -89,7 +92,7 @@ export function subscribeProjects(cb) {
 }
 
 export function subscribeTasks(projectId, cb) {
-  const q = query(collection(db, COLLECTIONS.TASKS), where('projectId', '==', projectId))
+  const q = query(tasksCol(), where('projectId', '==', projectId))
   return onSnapshot(
     q,
     (snap) => cb(snap.docs.map((d) => ({ id: d.id, ...d.data() }))),
@@ -130,23 +133,23 @@ export async function removeProject(id, companyId) {
   await deleteDoc(legacyProjectDoc(id))
   
   // Clean up all tasks associated with this project
-  const q = query(collection(db, COLLECTIONS.TASKS), where('projectId', '==', id))
+  const q = query(tasksCol(), where('projectId', '==', id))
   const snap = await getDocs(q)
   const batch = snap.docs.map(d => deleteDoc(d.ref))
   await Promise.all(batch)
 }
 
 export async function createTask(data) {
-  const ref = await addDoc(collection(db, COLLECTIONS.TASKS), { ...data, updatedAt: serverTimestamp() })
+  const ref = await addDoc(tasksCol(), { ...data, updatedAt: serverTimestamp() })
   return { id: ref.id, ...data }
 }
 
 export async function saveTask(id, data) {
-  await updateDoc(doc(db, COLLECTIONS.TASKS, id), { ...data, updatedAt: serverTimestamp() })
+  await updateDoc(taskDoc(id), { ...data, updatedAt: serverTimestamp() })
 }
 
 export async function removeTask(id) {
-  await deleteDoc(doc(db, COLLECTIONS.TASKS, id))
+  await deleteDoc(taskDoc(id))
 }
 
 // Upload an attachment to Firebase Storage and return its download URL.

@@ -65,7 +65,7 @@ const APP_NAME = 'SmartProject'
 
 const companiesCol = () => collection(db, APP_NAME, 'root', 'companies')
 const companyProjectDoc = (companyId, projectId) => doc(db, APP_NAME, 'root', 'companies', companyId, 'projects', projectId)
-const tasksCol = () => collection(db, 'Tasks')
+const tasksCol = () => collection(db, APP_NAME, 'root', 'Tasks')
 
 async function run() {
   const companyId = 'cmg-tech-partner'

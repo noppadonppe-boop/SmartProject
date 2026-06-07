@@ -229,8 +229,8 @@ export default function GanttChart({ tasks, projectStart, projectEnd, scale, pxP
           const plan = !t.isHeader ? planGeom(t) : null
           const act = !t.isHeader ? barGeom(t.actualStartDate, t.actualEndDate) : null
           const base = !t.isHeader && showBaseline ? barGeom(t.baselineStartDate, t.baselineEndDate) : null
-          const color = GROUP_COLORS[t.group] || '#64748b'
           const crit = isCritical(t.id)
+          const color = crit ? '#ef4444' : (GROUP_COLORS[t.group] || '#64748b')
           // Finish variance vs baseline (days). Positive = slipped later.
           let variance = null
           if (t.baselineEndDate && t.planEndDate) {
@@ -310,8 +310,16 @@ export default function GanttChart({ tasks, projectStart, projectEnd, scale, pxP
               </marker>
             </defs>
             {arrows.map((a) => {
-              const midX = a.x1 + 10
-              const d = `M ${a.x1} ${a.y1} H ${midX} V ${a.y2} H ${a.x2}`
+              let d = ''
+              if (a.x2 >= a.x1 + 20) {
+                const midX = a.x1 + 10
+                d = `M ${a.x1} ${a.y1} H ${midX} V ${a.y2} H ${a.x2}`
+              } else {
+                const midX1 = a.x1 + 10
+                const midY = a.y2 > a.y1 ? a.y1 + 13 : a.y1 - 13
+                const midX2 = Math.max(0, a.x2 - 15)
+                d = `M ${a.x1} ${a.y1} H ${midX1} V ${midY} H ${midX2} V ${a.y2} H ${a.x2}`
+              }
               return (
                 <g key={a.key}>
                   {/* Visible arrow */}

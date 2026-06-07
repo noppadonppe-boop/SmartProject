@@ -73,12 +73,14 @@ export function AuthProvider({ children }) {
     const unsub = onAuthStateChanged(auth, (u) => {
       profileUnsubRef.current?.()
       if (!u) {
+        try { localStorage.removeItem(SESSION_KEY) } catch {}
         setFirebaseUser(null)
         setUserProfile(null)
         setLoading(false)
         return
       }
       if (sessionExpired()) {
+        try { localStorage.removeItem(SESSION_KEY) } catch {}
         fbSignOut(auth).catch(() => {})
         return
       }
@@ -120,8 +122,8 @@ export function AuthProvider({ children }) {
   }, [])
 
   const loginWithEmail = useCallback(async (email, password) => {
-    const cred = await signInWithEmailAndPassword(auth, email, password)
     setSessionExpiry()
+    const cred = await signInWithEmailAndPassword(auth, email, password)
     const profile = (await fetchProfile(cred.user.email)) || (await createUserProfile(cred.user))
     logActivity('LOGIN', { email: cred.user.email, method: 'email' })
     setUserProfile(profile)
@@ -129,9 +131,9 @@ export function AuthProvider({ children }) {
   }, [])
 
   const loginWithGoogle = useCallback(async () => {
+    setSessionExpiry()
     const provider = new GoogleAuthProvider()
     const cred = await signInWithPopup(auth, provider)
-    setSessionExpiry()
     let profile = await fetchProfile(cred.user.email)
     if (!profile) {
       // New Google user → auto-create (first user → MasterAdmin, else Staff/pending)
@@ -144,8 +146,8 @@ export function AuthProvider({ children }) {
   }, [])
 
   const registerWithEmail = useCallback(async (email, password, firstName, lastName, position, department) => {
-    const cred = await createUserWithEmailAndPassword(auth, email, password)
     setSessionExpiry()
+    const cred = await createUserWithEmailAndPassword(auth, email, password)
     const profile = await createUserProfile(cred.user, { firstName, lastName, position, department })
     logActivity('REGISTER', { email: cred.user.email, method: 'email' })
     setUserProfile(profile)

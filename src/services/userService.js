@@ -157,9 +157,14 @@ export function subscribeAppMeta(cb) {
 // ---- Activity logging (non-blocking) ----
 export function logActivity(action, data = {}) {
   // Fire-and-forget. Never let a log failure block the auth flow.
+  const cleanData = Object.entries(data).reduce((acc, [k, v]) => {
+    if (v !== undefined) acc[k] = v;
+    return acc;
+  }, {});
+
   addDoc(activityCol(), {
     action,
-    ...data,
+    ...cleanData,
     at: serverTimestamp(),
   }).catch(() => {})
 }
